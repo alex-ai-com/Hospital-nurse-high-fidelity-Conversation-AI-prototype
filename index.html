@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>NurseVoice Prototype</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/flowbite.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;background:#0f1117;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .phone-shell{width:390px;min-height:844px;background:#1c1c1e;border-radius:54px;padding:3px;box-shadow:0 0 0 2px #3a3a3c,0 0 0 6px #2c2c2e,0 30px 80px rgba(0,0,0,.9),inset 0 0 30px rgba(255,255,255,.03);position:relative;flex-shrink:0}
+  .phone-screen{width:100%;min-height:838px;background:#000;border-radius:52px;overflow:hidden;position:relative;display:flex;flex-direction:column}
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:34px;background:#000;border-radius:0 0 20px 20px;z-index:100}
+  .status-bar{height:44px;background:#000;display:flex;align-items:flex-end;justify-content:space-between;padding:0 28px 8px;flex-shrink:0;position:relative;z-index:10}
+  .status-bar span{color:#fff;font-size:12px;font-weight:600}
+  .screen-content{flex:1;overflow-y:auto;background:#0a0a0f;scrollbar-width:none}
+  .screen-content::-webkit-scrollbar{display:none}
+  .bottom-bar{height:34px;background:#0a0a0f;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .home-indicator{width:134px;height:5px;background:#333;border-radius:3px}
+
+  /* Secure header */
+  .secure-header{background:linear-gradient(135deg,#0a0a0f 0%,#0d1117 100%);padding:16px 20px 12px;border-bottom:1px solid #1a2030}
+  .badge-secure{display:inline-flex;align-items:center;gap:6px;background:rgba(0,212,110,.12);border:1px solid rgba(0,212,110,.3);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;color:#00d46e;letter-spacing:.3px}
+  .badge-dot{width:6px;height:6px;background:#00d46e;border-radius:50%;animation:pulse-dot 2s infinite}
+  @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+  .app-title{font-size:22px;font-weight:700;color:#fff;margin-top:8px;letter-spacing:-.3px}
+  .app-sub{font-size:12px;color:#666;margin-top:2px}
+  .lock-icon{font-size:14px}
+
+  /* Navigation tabs */
+  .tab-bar{display:flex;background:#0d0d12;border-bottom:1px solid #1a1a2e;padding:0 4px}
+  .tab-btn{flex:1;padding:12px 4px;font-size:12px;font-weight:600;color:#555;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;letter-spacing:.2px}
+  .tab-btn.active{color:#4f8ef7;border-bottom-color:#4f8ef7}
+
+  /* Views */
+  .view{display:none;padding:16px 20px;padding-bottom:24px}
+  .view.active{display:block}
+
+  /* Persona selector */
+  .scenario-card{background:#111827;border:1px solid #1f2937;border-radius:16px;padding:14px;margin-bottom:10px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:12px}
+  .scenario-card:hover,.scenario-card.selected{border-color:#4f8ef7;background:#0f1c35}
+  .scenario-card.selected .sc-check{opacity:1}
+  .sc-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+  .sc-info{flex:1}
+  .sc-title{font-size:13px;font-weight:600;color:#e2e8f0}
+  .sc-sub{font-size:11px;color:#6b7280;margin-top:2px}
+  .sc-check{opacity:0;color:#4f8ef7;font-size:16px;transition:opacity .2s}
+  .sc-time{font-size:10px;color:#4b5563;background:#1f2937;padding:2px 8px;border-radius:8px;margin-top:4px;display:inline-block}
+
+  /* Q&A Wizard */
+  .wizard-header{margin-bottom:20px}
+  .step-indicator{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+  .step-pip{width:8px;height:8px;border-radius:50%;background:#1f2937}
+  .step-pip.done{background:#00d46e}
+  .step-pip.active{background:#4f8ef7;width:24px;border-radius:4px}
+  .step-label{font-size:11px;color:#6b7280;font-weight:500;margin-left:4px}
+  .q-card{background:#111827;border:1px solid #1f2937;border-radius:20px;padding:20px}
+  .q-tag{font-size:10px;font-weight:700;letter-spacing:.8px;color:#4f8ef7;text-transform:uppercase;margin-bottom:8px}
+  .q-text{font-size:16px;font-weight:600;color:#f1f5f9;line-height:1.5;margin-bottom:16px}
+  .q-context{font-size:12px;color:#6b7280;background:#0d1117;border-radius:10px;padding:10px;margin-bottom:16px;line-height:1.6;border-left:3px solid #1f2937}
+
+  /* Voice recording */
+  .voice-area{background:#0d1117;border:1px solid #1a2535;border-radius:16px;padding:16px;margin-bottom:16px;text-align:center}
+  .voice-ring{width:64px;height:64px;border-radius:50%;background:rgba(79,142,247,.1);border:2px solid rgba(79,142,247,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;position:relative;cursor:pointer;transition:all .2s}
+  .voice-ring:hover{background:rgba(79,142,247,.18)}
+  .voice-ring.recording{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4)}
+  .voice-ring.recording::after{content:'';position:absolute;inset:-8px;border-radius:50%;border:2px solid rgba(239,68,68,.2);animation:ring-pulse 1.5s infinite}
+  @keyframes ring-pulse{0%{transform:scale(1);opacity:.8}100%{transform:scale(1.4);opacity:0}}
+  .voice-icon{font-size:26px}
+  .wave-bars{display:flex;align-items:center;justify-content:center;gap:3px;height:28px;margin-bottom:8px}
+  .wave-bar{width:3px;background:#4f8ef7;border-radius:2px;transition:height .1s}
+  .wave-bar.inactive{height:6px;background:#2d3748}
+  .voice-status{font-size:12px;color:#6b7280;font-weight:500}
+  .voice-status.active{color:#ef4444}
+  .voice-transcript{background:#1a2535;border-radius:10px;padding:10px;margin-top:10px;font-size:12px;color:#94a3b8;line-height:1.6;text-align:left;min-height:48px;display:none}
+
+  /* Option chips */
+  .options-label{font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+  .chip-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .chip{padding:8px 14px;background:#1a2535;border:1px solid #2d3748;border-radius:20px;font-size:12px;color:#94a3b8;cursor:pointer;transition:all .2s;font-weight:500}
+  .chip:hover,.chip.selected{background:#0f1c35;border-color:#4f8ef7;color:#93c5fd}
+  .chip.selected{background:#162040;border-color:#4f8ef7}
+
+  /* Noise error */
+  .noise-alert{background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.25);border-radius:12px;padding:12px;margin-bottom:12px;display:none;align-items:flex-start;gap:10px}
+  .noise-alert.show{display:flex}
+  .noise-alert-text{font-size:12px;color:#fbbf24;line-height:1.5}
+
+  /* Action buttons */
+  .btn-primary{width:100%;padding:14px;background:linear-gradient(135deg,#4f8ef7,#3b6fd4);border:none;border-radius:14px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.2px}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(79,142,247,.3)}
+  .btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none}
+  .btn-secondary{width:100%;padding:12px;background:transparent;border:1px solid #2d3748;border-radius:14px;color:#6b7280;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;margin-top:8px}
+  .btn-secondary:hover{border-color:#4f8ef7;color:#93c5fd}
+
+  /* PANIC BUTTON */
+  .panic-btn{width:100%;padding:16px;background:linear-gradient(135deg,#dc2626,#991b1b);border:none;border-radius:16px;color:#fff;font-size:13px;font-weight:800;cursor:pointer;transition:all .15s;letter-spacing:.4px;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 20px rgba(220,38,38,.3);text-transform:uppercase;margin-top:16px}
+  .panic-btn:hover{transform:scale(1.02);box-shadow:0 6px 28px rgba(220,38,38,.5)}
+  .panic-btn:active{transform:scale(.98)}
+  .panic-pulse{width:10px;height:10px;background:#fca5a5;border-radius:50%;animation:panic-blink 1s infinite}
+  @keyframes panic-blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+  /* Panic overlay */
+  .panic-overlay{position:absolute;inset:0;background:rgba(0,0,0,.96);z-index:999;display:none;flex-direction:column;align-items:center;justify-content:center;border-radius:52px;backdrop-filter:blur(24px);padding:40px}
+  .panic-overlay.active{display:flex}
+  .panic-lock-icon{font-size:56px;margin-bottom:16px}
+  .panic-title{font-size:18px;font-weight:800;color:#fff;text-align:center;margin-bottom:8px}
+  .panic-sub{font-size:13px;color:#666;text-align:center;line-height:1.6;margin-bottom:32px}
+  .panic-badge{background:rgba(0,212,110,.1);border:1px solid rgba(0,212,110,.3);border-radius:12px;padding:10px 16px;font-size:11px;color:#00d46e;font-weight:600;letter-spacing:.3px;margin-bottom:24px;text-align:center}
+  .btn-resume{padding:14px 32px;background:linear-gradient(135deg,#4f8ef7,#3b6fd4);border:none;border-radius:14px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;width:100%}
+
+  /* Dashboard */
+  .section-label{font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px}
+  .report-card{background:#111827;border:1px solid #1f2937;border-radius:16px;padding:16px;margin-bottom:12px}
+  .report-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+  .report-title{font-size:14px;font-weight:700;color:#e2e8f0}
+  .report-meta{font-size:10px;color:#6b7280;margin-top:3px}
+  .status-pill{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.3px;flex-shrink:0}
+  .status-escalated{background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.25)}
+  .status-review{background:rgba(79,142,247,.12);color:#93c5fd;border:1px solid rgba(79,142,247,.25)}
+  .status-resolved{background:rgba(0,212,110,.12);color:#00d46e;border:1px solid rgba(0,212,110,.25)}
+  .status-new{background:rgba(156,163,175,.1);color:#9ca3af;border:1px solid rgba(156,163,175,.2)}
+  .timeline{padding-left:12px;border-left:1px solid #1f2937;margin-top:8px}
+  .tl-item{position:relative;padding:6px 0 6px 16px;font-size:11px;color:#6b7280;line-height:1.5}
+  .tl-item::before{content:'';position:absolute;left:-5px;top:12px;width:8px;height:8px;border-radius:50%;background:#1f2937;border:1.5px solid #374151}
+  .tl-item.latest::before{background:#4f8ef7;border-color:#4f8ef7}
+  .tl-item.resolved::before{background:#00d46e;border-color:#00d46e}
+  .tl-time{color:#4b5563;font-size:10px;display:block}
+  .tl-text{color:#9ca3af}
+
+  .stats-row{display:flex;gap:10px;margin-bottom:20px}
+  .stat-box{flex:1;background:#111827;border:1px solid #1f2937;border-radius:14px;padding:14px;text-align:center}
+  .stat-num{font-size:24px;font-weight:800;color:#fff}
+  .stat-label{font-size:10px;color:#6b7280;font-weight:500;margin-top:2px}
+  .stat-change{font-size:10px;color:#00d46e;margin-top:4px;font-weight:600}
+
+  /* Confirmation screen */
+  .confirm-screen{text-align:center;padding:20px 0}
+  .confirm-icon{font-size:56px;margin-bottom:16px}
+  .confirm-title{font-size:20px;font-weight:800;color:#fff;margin-bottom:8px}
+  .confirm-sub{font-size:13px;color:#6b7280;line-height:1.6;margin-bottom:24px}
+  .anon-badge{background:rgba(0,212,110,.08);border:1px solid rgba(0,212,110,.2);border-radius:14px;padding:14px;margin-bottom:20px;text-align:left}
+  .anon-row{display:flex;align-items:center;gap:8px;font-size:12px;color:#4ade80;margin-bottom:6px;font-weight:500}
+  .anon-row:last-child{margin-bottom:0}
+
+  /* Scrollbar polish for webkit */
+  ::-webkit-scrollbar{width:0}
+</style>
+</head>
+<body>
+<div class="phone-shell">
+  <div class="phone-screen">
+    <div class="notch"></div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <span>9:41</span>
+      <span style="color:transparent">placeholder</span>
+      <span>●●● 5G 🔋</span>
+    </div>
+
+    <!-- Secure Header -->
+    <div class="secure-header">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div class="badge-secure">
+            <div class="badge-dot"></div>
+            <span class="lock-icon">🔐</span>
+            Data Encrypted &amp; Anonymized
+          </div>
+          <div class="app-title">NurseVoice</div>
+          <div class="app-sub">Frontline Intelligence Platform</div>
+        </div>
+        <div style="text-align:right">
+          <div style="width:36px;height:36px;background:#0d1117;border:1px solid #1f2937;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer" onclick="showProfile()">👤</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tab-capture" onclick="switchTab('capture')">📋 Capture</button>
+      <button class="tab-btn" id="tab-dashboard" onclick="switchTab('dashboard')">📊 Reports</button>
+      <button class="tab-btn" id="tab-impact" onclick="switchTab('impact')">✨ Impact</button>
+    </div>
+
+    <!-- Screen Content -->
+    <div class="screen-content" id="screen-content">
+
+      <!-- ─── CAPTURE VIEW ─── -->
+      <div class="view active" id="view-capture">
+
+        <!-- Step 0: Scenario Selection -->
+        <div id="step-0">
+          <div style="margin-bottom:16px">
+            <div style="font-size:15px;font-weight:700;color:#f1f5f9;margin-bottom:4px">Select your scenario</div>
+            <div style="font-size:12px;color:#6b7280;line-height:1.5">Choose what best matches your current situation. This shapes your micro-prompts.</div>
+          </div>
+          <div id="scenario-list">
+            <div class="scenario-card" onclick="selectScenario(0,this)">
+              <div class="sc-icon" style="background:rgba(79,142,247,.12)">🏥</div>
+              <div class="sc-info">
+                <div class="sc-title">Med-Surg Night Shift</div>
+                <div class="sc-sub">Post-incident or equipment issue</div>
+                <span class="sc-time">⏱ ~4 min session</span>
+              </div>
+              <div class="sc-check">✓</div>
+            </div>
+            <div class="scenario-card" onclick="selectScenario(1,this)">
+              <div class="sc-icon" style="background:rgba(239,68,68,.12)">🚨</div>
+              <div class="sc-info">
+                <div class="sc-title">Emergency Department</div>
+                <div class="sc-sub">Capacity, diversion or triage pressure</div>
+                <span class="sc-time">⏱ ~90 sec session</span>
+              </div>
+              <div class="sc-check">✓</div>
+            </div>
+            <div class="scenario-card" onclick="selectScenario(2,this)">
+              <div class="sc-icon" style="background:rgba(168,85,247,.12)">💗</div>
+              <div class="sc-info">
+                <div class="sc-title">ICU / End of Shift</div>
+                <div class="sc-sub">Handoff breakdown or protocol gap</div>
+                <span class="sc-time">⏱ ~8 min session</span>
+              </div>
+              <div class="sc-check">✓</div>
+            </div>
+            <div class="scenario-card" onclick="selectScenario(3,this)">
+              <div class="sc-icon" style="background:rgba(34,197,94,.12)">🧸</div>
+              <div class="sc-info">
+                <div class="sc-title">Pediatric Ward</div>
+                <div class="sc-sub">Inter-dept coordination failure</div>
+                <span class="sc-time">⏱ ~6 min session</span>
+              </div>
+              <div class="sc-check">✓</div>
+            </div>
+          </div>
+          <button class="btn-primary" id="start-btn" onclick="startWizard()" disabled>Begin Guided Interview →</button>
+          <div style="font-size:11px;color:#4b5563;text-align:center;margin-top:10px;line-height:1.6">Your identity is never recorded. Unit, shift code, and name are stripped before storage.</div>
+        </div>
+
+        <!-- Step 1: Q1 -->
+        <div id="step-1" style="display:none">
+          <div class="wizard-header">
+            <div class="step-indicator">
+              <div class="step-pip done" id="pip1a"></div>
+              <div class="step-pip active" id="pip1b"></div>
+              <div class="step-pip" id="pip1c"></div>
+              <div class="step-pip" id="pip1d"></div>
+              <div class="step-label" id="step-label-text">Question 1 of 3</div>
+            </div>
+          </div>
+          <div class="q-card">
+            <div class="q-tag">Operational Trigger</div>
+            <div class="q-text" id="q1-text">Walk me through what just broke down operationally.</div>
+            <div class="q-context" id="q1-context">Describe the system failure, not the outcome. Focus on what went wrong structurally — equipment, staffing, protocol, or communication.</div>
+
+            <!-- Voice area -->
+            <div class="voice-area">
+              <div class="voice-ring" id="voice-ring-1" onclick="toggleRecording(1)">
+                <span class="voice-icon" id="voice-icon-1">🎙️</span>
+              </div>
+              <div class="wave-bars" id="wave-bars-1">
+                <div class="wave-bar inactive" style="height:8px"></div>
+                <div class="wave-bar inactive" style="height:12px"></div>
+                <div class="wave-bar inactive" style="height:6px"></div>
+                <div class="wave-bar inactive" style="height:16px"></div>
+                <div class="wave-bar inactive" style="height:10px"></div>
+                <div class="wave-bar inactive" style="height:14px"></div>
+                <div class="wave-bar inactive" style="height:8px"></div>
+                <div class="wave-bar inactive" style="height:20px"></div>
+                <div class="wave-bar inactive" style="height:12px"></div>
+                <div class="wave-bar inactive" style="height:7px"></div>
+              </div>
+              <div class="voice-status" id="voice-status-1">Tap mic to record your response</div>
+              <div class="voice-transcript" id="transcript-1"></div>
+            </div>
+
+            <!-- Noise error -->
+            <div class="noise-alert" id="noise-alert-1">
+              <span style="font-size:18px">⚠️</span>
+              <div class="noise-alert-text"><strong>High background noise detected.</strong><br>Transcript confidence is low. Tap an option below or switch to manual entry.</div>
+            </div>
+
+            <div class="options-label">Or select what applies:</div>
+            <div class="chip-grid" id="chips-q1">
+              <div class="chip" onclick="selectChip(this,'q1')">Equipment failure</div>
+              <div class="chip" onclick="selectChip(this,'q1')">Unsafe staffing ratio</div>
+              <div class="chip" onclick="selectChip(this,'q1')">Medication delay</div>
+              <div class="chip" onclick="selectChip(this,'q1')">Protocol breakdown</div>
+              <div class="chip" onclick="selectChip(this,'q1')">Communication gap</div>
+              <div class="chip" onclick="selectChip(this,'q1')">Supply shortage</div>
+            </div>
+          </div>
+
+          <button class="btn-primary" id="q1-next" onclick="goToStep(2)" disabled style="margin-top:16px">Continue →</button>
+          <button class="panic-btn" onclick="triggerPanic()">
+            <div class="panic-pulse"></div>
+            PAUSE SESSION — RUN TO PATIENT
+          </button>
+        </div>
+
+        <!-- Step 2: Q2 -->
+        <div id="step-2" style="display:none">
+          <div class="wizard-header">
+            <div class="step-indicator">
+              <div class="step-pip done"></div>
+              <div class="step-pip done"></div>
+              <div class="step-pip active"></div>
+              <div class="step-pip"></div>
+              <div class="step-label">Question 2 of 3</div>
+            </div>
+          </div>
+          <div class="q-card">
+            <div class="q-tag">Pattern &amp; Frequency</div>
+            <div class="q-text">Has this happened before? How often this week?</div>
+            <div class="q-context">Recurring issues carry more weight in escalation. Even rough estimates help establish the pattern for clinical leadership.</div>
+
+            <div class="voice-area">
+              <div class="voice-ring" id="voice-ring-2" onclick="toggleRecording(2)">
+                <span class="voice-icon" id="voice-icon-2">🎙️</span>
+              </div>
+              <div class="wave-bars" id="wave-bars-2">
+                <div class="wave-bar inactive" style="height:8px"></div>
+                <div class="wave-bar inactive" style="height:12px"></div>
+                <div class="wave-bar inactive" style="height:6px"></div>
+                <div class="wave-bar inactive" style="height:16px"></div>
+                <div class="wave-bar inactive" style="height:10px"></div>
+                <div class="wave-bar inactive" style="height:14px"></div>
+                <div class="wave-bar inactive" style="height:8px"></div>
+                <div class="wave-bar inactive" style="height:20px"></div>
+                <div class="wave-bar inactive" style="height:12px"></div>
+                <div class="wave-bar inactive" style="height:7px"></div>
+              </div>
+              <div class="voice-status" id="voice-status-2">Tap mic to record your response</div>
+              <div class="voice-transcript" id="transcript-2"></div>
+            </div>
+
+            <div class="noise-alert" id="noise-alert-2">
+              <span style="font-size:18px">⚠️</span>
+              <div class="noise-alert-text"><strong>High background noise detected.</strong><br>Confidence low. Select an option below instead.</div>
+            </div>
+
+            <div class="options-label">Frequency:</div>
+            <div class="chip-grid" id="chips-q2">
+              <div class="chip" onclick="selectChip(this,'q2')">First time</div>
+              <div class="chip" onclick="selectChip(this,'q2')">2–3× this week</div>
+              <div class="chip" onclick="selectChip(this,'q2')">Daily this week</div>
+              <div class="chip" onclick="selectChip(this,'q2')">Ongoing for weeks</div>
+              <div class="chip" onclick="selectChip(this,'q2')">Ongoing for months</div>
+            </div>
+          </div>
+          <button class="btn-primary" id="q2-next" onclick="goToStep(3)" disabled style="margin-top:16px">Continue →</button>
+          <button class="panic-btn" onclick="triggerPanic()">
+            <div class="panic-pulse"></div>
+            PAUSE SESSION — RUN TO PATIENT
+          </button>
+        </div>
+
+        <!-- Step 3: Q3 -->
+        <div id="step-3" style="display:none">
+          <div class="wizard-header">
+            <div class="step-indicator">
+              <div class="step-pip done"></div>
+              <div class="step-pip done"></div>
+              <div class="step-pip done"></div>
+              <div class="step-pip active"></div>
+              <div class="step-label">Question 3 of 3</div>
+            </div>
+          </div>
+          <div class="q-card">
+            <div class="q-tag">Workaround &amp; Fix</div>
+            <div class="q-text">What are you doing to compensate — and what would actually fix this?</div>
+            <div class="q-context">Your informal workarounds are invisible to leadership. Naming them is as important as naming the problem. Your fix ideas go directly to clinical operations.</div>
+
+            <div class="voice-area">
+              <div class="voice-ring" id="voice-ring-3" onclick="toggleRecording(3)">
+                <span class="voice-icon" id="voice-icon-3">🎙️</span>
+              </div>
+              <div class="wave-bars" id="wave-bars-3">
+                <div class="wave-bar inactive" style="height:8px"></div>
+                <div class="wave-bar inactive" style="height:12px"></div>
+                <div class="wave-bar inactive" style="height:6px"></div>
+                <div class="wave-bar inactive" style="height:16px"></div>
+                <div class="wave-bar inactive" style="height:10px"></div>
+                <div class="wave-bar inactive" style="height:14px"></div>
+                <div class="wave-bar inactive" style="height:8px"></div>
+                <div class="wave-bar inactive" style="height:20px"></div>
+                <div class="wave-bar inactive" style="height:12px"></div>
+                <div class="wave-bar inactive" style="height:7px"></div>
+              </div>
+              <div class="voice-status" id="voice-status-3">Tap mic to record your response</div>
+              <div class="voice-transcript" id="transcript-3"></div>
+            </div>
+
+            <div class="noise-alert" id="noise-alert-3">
+              <span style="font-size:18px">⚠️</span>
+              <div class="noise-alert-text"><strong>High background noise detected.</strong><br>Switch to tap or manual entry below.</div>
+            </div>
+
+            <div class="options-label">Fix category:</div>
+            <div class="chip-grid" id="chips-q3">
+              <div class="chip" onclick="selectChip(this,'q3')">Immediate maintenance request</div>
+              <div class="chip" onclick="selectChip(this,'q3')">Add float staff</div>
+              <div class="chip" onclick="selectChip(this,'q3')">Revise handoff protocol</div>
+              <div class="chip" onclick="selectChip(this,'q3')">Cross-dept coordination meeting</div>
+              <div class="chip" onclick="selectChip(this,'q3')">Leadership escalation now</div>
+              <div class="chip" onclick="selectChip(this,'q3')">Equipment replacement</div>
+            </div>
+          </div>
+          <button class="btn-primary" id="q3-next" onclick="submitReport()" disabled style="margin-top:16px">🔒 Submit Anonymized Report</button>
+          <button class="panic-btn" onclick="triggerPanic()">
+            <div class="panic-pulse"></div>
+            PAUSE SESSION — RUN TO PATIENT
+          </button>
+        </div>
+
+        <!-- Step 4: Confirmation -->
+        <div id="step-4" style="display:none">
+          <div class="confirm-screen">
+            <div class="confirm-icon">✅</div>
+            <div class="confirm-title">Report Submitted</div>
+            <div class="confirm-sub">Your operational insight has been anonymized, encrypted, and added to the pattern dataset. You contributed to a safer unit — without your name attached.</div>
+            <div class="anon-badge">
+              <div class="anon-row">✓ &nbsp;Name stripped before storage</div>
+              <div class="anon-row">✓ &nbsp;Unit &amp; shift code removed</div>
+              <div class="anon-row">✓ &nbsp;Audio deleted — text only retained</div>
+              <div class="anon-row">✓ &nbsp;No reverse linkage possible</div>
+            </div>
+            <div style="background:#111827;border:1px solid #1f2937;border-radius:14px;padding:14px;margin-bottom:16px;text-align:left">
+              <div style="font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">What happens next</div>
+              <div style="font-size:12px;color:#94a3b8;line-height:1.7">Your report joins <strong style="color:#e2e8f0">other similar submissions</strong> to form a pattern. Once 3+ nurses report the same issue, it auto-escalates to the designated clinical operations reviewer.</div>
+            </div>
+            <button class="btn-primary" onclick="resetToStart()">Submit Another Report</button>
+            <button class="btn-secondary" onclick="switchTab('dashboard')">View Report Tracker →</button>
+          </div>
+        </div>
+
+      </div><!-- end view-capture -->
+
+      <!-- ─── REPORTS DASHBOARD VIEW ─── -->
+      <div class="view" id="view-dashboard">
+        <div class="stats-row">
+          <div class="stat-box">
+            <div class="stat-num" style="color:#4f8ef7">12</div>
+            <div class="stat-label">Reports This Week</div>
+            <div class="stat-change">↑ 3 from last week</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" style="color:#fbbf24">4</div>
+            <div class="stat-label">Escalated</div>
+            <div class="stat-change" style="color:#fbbf24">In review</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" style="color:#00d46e">2</div>
+            <div class="stat-label">Resolved</div>
+            <div class="stat-change">This month</div>
+          </div>
+        </div>
+
+        <div class="section-label">Active Reports</div>
+
+        <!-- Report 1 -->
+        <div class="report-card">
+          <div class="report-header">
+            <div>
+              <div class="report-title">IV Pump Shortage — Med-Surg</div>
+              <div class="report-meta">📋 Equipment · Reported 6 nurses · 3 days ago</div>
+            </div>
+            <div class="status-pill status-escalated">ESCALATED</div>
+          </div>
+          <div class="timeline">
+            <div class="tl-item">
+              <span class="tl-time">Day 1 · 11:42pm</span>
+              <span class="tl-text">First report flagged — single nurse, Ward 4B</span>
+            </div>
+            <div class="tl-item">
+              <span class="tl-time">Day 2 · 8:15am</span>
+              <span class="tl-text">Pattern threshold reached — 3 nurses, 2 wards</span>
+            </div>
+            <div class="tl-item latest">
+              <span class="tl-time">Day 3 · 2:30pm · Latest</span>
+              <span class="tl-text">Auto-escalated to Biomed &amp; Supply Chain. Review meeting booked.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Report 2 -->
+        <div class="report-card">
+          <div class="report-header">
+            <div>
+              <div class="report-title">Forced Diversion Removal — ED</div>
+              <div class="report-meta">🚨 Capacity · Reported 4 nurses · 1 day ago</div>
+            </div>
+            <div class="status-pill status-review">IN REVIEW</div>
+          </div>
+          <div class="timeline">
+            <div class="tl-item">
+              <span class="tl-time">Yesterday · 6:22pm</span>
+              <span class="tl-text">2 ED nurses reported simultaneous forced diversion lift</span>
+            </div>
+            <div class="tl-item latest">
+              <span class="tl-time">Today · 9:00am · Latest</span>
+              <span class="tl-text">4 total reports. Assigned to Patient Safety Officer for review.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Report 3 -->
+        <div class="report-card">
+          <div class="report-header">
+            <div>
+              <div class="report-title">SBAR Handoff Gap — Cardiac ICU</div>
+              <div class="report-meta">💗 Protocol · Reported 8 nurses · 2 weeks ago</div>
+            </div>
+            <div class="status-pill status-resolved">RESOLVED</div>
+          </div>
+          <div class="timeline">
+            <div class="tl-item">
+              <span class="tl-time">2 weeks ago</span>
+              <span class="tl-text">Pattern emerged: medication timing gaps in structured handoff</span>
+            </div>
+            <div class="tl-item">
+              <span class="tl-time">10 days ago</span>
+              <span class="tl-text">Escalated to CNO. Interim dual-nurse confirmation protocol introduced.</span>
+            </div>
+            <div class="tl-item resolved">
+              <span class="tl-time">3 days ago · Resolved</span>
+              <span class="tl-text">Revised SBAR checklist deployed. Zero gaps reported since rollout.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Report 4 -->
+        <div class="report-card">
+          <div class="report-header">
+            <div>
+              <div class="report-title">Specialist Consult Delays — Peds</div>
+              <div class="report-meta">🧸 Coordination · Reported 2 nurses · Today</div>
+            </div>
+            <div class="status-pill status-new">NEW</div>
+          </div>
+          <div class="timeline">
+            <div class="tl-item latest">
+              <span class="tl-time">Today · 3:41pm · Latest</span>
+              <span class="tl-text">2 reports filed. Needs 1 more to reach auto-escalation threshold.</span>
+            </div>
+          </div>
+          <div style="margin-top:10px;background:rgba(79,142,247,.06);border:1px solid rgba(79,142,247,.15);border-radius:10px;padding:10px;font-size:11px;color:#6b7280">
+            <span style="color:#93c5fd;font-weight:600">1 more report needed</span> to auto-escalate to Discharge Planning &amp; Clinical Coordination.
+          </div>
+        </div>
+
+      </div><!-- end view-dashboard -->
+
+      <!-- ─── IMPACT VIEW ─── -->
+      <div class="view" id="view-impact">
+        <div style="text-align:center;padding:12px 0 20px">
+          <div style="font-size:40px;margin-bottom:8px">✨</div>
+          <div style="font-size:17px;font-weight:800;color:#f1f5f9">Your Voice. Real Change.</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:4px;line-height:1.6">Here is what anonymized frontline data has changed at this facility in the last 30 days.</div>
+        </div>
+
+        <div class="section-label">Changes Driven by Nurse Reports</div>
+
+        <div style="background:#111827;border:1px solid #1f2937;border-radius:16px;padding:16px;margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="font-size:22px">🔧</span>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:#e2e8f0">Central Monitor Repair — Ward 4B</div>
+              <div style="font-size:11px;color:#6b7280">6 reports · Resolved in 48 hours</div>
+            </div>
+          </div>
+          <div style="font-size:12px;color:#94a3b8;line-height:1.6;border-left:2px solid #00d46e;padding-left:10px">"The monitor had been intermittently failing for 6 weeks. It took 6 nurses reporting the same pattern for it to reach Biomed in a way that couldn't be ignored."</div>
+        </div>
+
+        <div style="background:#111827;border:1px solid #1f2937;border-radius:16px;padding:16px;margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="font-size:22px">📋</span>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:#e2e8f0">ICU Handoff Protocol Redesigned</div>
+              <div style="font-size:11px;color:#6b7280">8 reports · Policy updated in 2 weeks</div>
+            </div>
+          </div>
+          <div style="font-size:12px;color:#94a3b8;line-height:1.6;border-left:2px solid #4f8ef7;padding-left:10px">Dual-nurse medication confirmation added to final 2 hours of shift handoff. Zero critical information drop events since deployment.</div>
+        </div>
+
+        <div style="background:#111827;border:1px solid #1f2937;border-radius:16px;padding:16px;margin-bottom:20px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="font-size:22px">👥</span>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:#e2e8f0">Weekend Float Pool Expanded</div>
+              <div style="font-size:11px;color:#6b7280">11 reports · HR policy change approved</div>
+            </div>
+          </div>
+          <div style="font-size:12px;color:#94a3b8;line-height:1.6;border-left:2px solid #a78bfa;padding-left:10px">Unsafe staffing ratio reports across 3 wards triggered a weekend float pool expansion. 2 additional RNs available every Fri–Sun.</div>
+        </div>
+
+        <div style="background:rgba(0,212,110,.06);border:1px solid rgba(0,212,110,.2);border-radius:16px;padding:16px;text-align:center;margin-bottom:8px">
+          <div style="font-size:28px;font-weight:800;color:#00d46e">31</div>
+          <div style="font-size:12px;color:#4ade80;font-weight:600;margin-top:2px">Operational changes this year</div>
+          <div style="font-size:11px;color:#6b7280;margin-top:4px">driven by anonymized nurse voice data</div>
+        </div>
+      </div><!-- end view-impact -->
+
+    </div><!-- end screen-content -->
+
+    <!-- Home Indicator -->
+    <div class="bottom-bar">
+      <div class="home-indicator"></div>
+    </div>
+
+    <!-- ─── PANIC OVERLAY ─── -->
+    <div class="panic-overlay" id="panic-overlay">
+      <div class="panic-lock-icon">🔒</div>
+      <div class="panic-title">Session Paused &amp; Secured</div>
+      <div class="panic-sub">Your in-progress response has been frozen and saved to local encrypted cache. No data was lost. No data was transmitted.</div>
+      <div class="panic-badge">🛡️ AES-256 LOCAL CACHE · NO NETWORK SYNC</div>
+      <div style="background:#111;border:1px solid #222;border-radius:14px;padding:14px;width:100%;margin-bottom:24px">
+        <div style="font-size:11px;color:#555;font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Session State</div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="color:#666">Status</span><span style="color:#fbbf24;font-weight:600">● Paused</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="color:#666">Progress</span><span style="color:#9ca3af" id="panic-progress">Q1 in progress</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:#666">Cache</span><span style="color:#00d46e;font-weight:600">Encrypted ✓</span></div>
+      </div>
+      <button class="btn-resume" onclick="resumeSession()">🔐 Authenticate &amp; Resume</button>
+      <button style="margin-top:10px;background:none;border:none;color:#555;font-size:12px;cursor:pointer;padding:8px" onclick="discardAndExit()">Discard session &amp; exit</button>
+    </div>
+
+  </div><!-- end phone-screen -->
+</div><!-- end phone-shell -->
+
+<script>
+// ─── STATE ───
+const state = {
+  selectedScenario: -1,
+  currentStep: 0,
+  q1Done: false,
+  q2Done: false,
+  q3Done: false,
+  recordings: {1: false, 2: false, 3: false},
+  waveIntervals: {},
+  noiseTimers: {},
+  panicStep: 1
+};
+
+const scenarios = [
+  {name:'Med-Surg Night Shift', q1:'Walk me through the equipment or system failure you just experienced.',ctx:'Focus on what broke structurally — was it hardware, software, a supply chain gap, or a process that failed silently?'},
+  {name:'Emergency Department', q1:'What just happened operationally that put patients at risk?',ctx:'Be specific: was this a forced capacity decision, a triage delay, or an unsafe staffing call made above you?'},
+  {name:'ICU / Cardiac', q1:'Describe exactly where the handoff broke down during this shift.',ctx:'What information was dropped, compressed, or transmitted informally instead of through the formal SBAR protocol?'},
+  {name:'Pediatric Ward', q1:'Walk me through the inter-departmental coordination failure you just managed.',ctx:'Which department failed to act, and what did you do at the bedside to compensate for that gap?'}
+];
+
+// ─── TAB SWITCHING ───
+function switchTab(tab) {
+  ['capture','dashboard','impact'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+    document.getElementById('view-'+t).classList.toggle('active', t===tab);
+  });
+  document.getElementById('screen-content').scrollTop = 0;
+}
+
+// ─── SCENARIO SELECTION ───
+function selectScenario(idx, el) {
+  document.querySelectorAll('.scenario-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  state.selectedScenario = idx;
+  document.getElementById('start-btn').disabled = false;
+}
+
+// ─── WIZARD ───
+function startWizard() {
+  const s = scenarios[state.selectedScenario];
+  document.getElementById('q1-text').textContent = s.q1;
+  document.getElementById('q1-context').textContent = s.ctx;
+  showStep(1);
+}
+
+function showStep(n) {
+  for(let i=0;i<=4;i++) {
+    const el = document.getElementById('step-'+i);
+    if(el) el.style.display = (i===n) ? 'block' : 'none';
+  }
+  state.panicStep = n;
+  document.getElementById('screen-content').scrollTop = 0;
+}
+
+function goToStep(n) {
+  showStep(n);
+}
+
+// ─── CHIP SELECTION ───
+function selectChip(el, qid) {
+  const grid = document.getElementById('chips-'+qid);
+  grid.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  const q = qid.replace('q','');
+  if(q==='1') { state.q1Done=true; enableNext('q1-next'); }
+  if(q==='2') { state.q2Done=true; enableNext('q2-next'); }
+  if(q==='3') { state.q3Done=true; enableNext('q3-next'); }
+}
+
+function enableNext(id) {
+  const btn = document.getElementById(id);
+  if(btn) { btn.disabled=false; }
+}
+
+// ─── VOICE RECORDING ───
+const transcripts = {
+  1: [
+    "The central monitoring system on our ward has been intermittently losing signal for about six weeks. We\'ve all noticed it. We had a near-miss tonight — bed alarm fired but didn\'t reach the station. We\'ve been doing verbal handoffs to compensate but nobody has formally reported it because the last three maintenance requests went nowhere.",
+    "We had three patients arrive simultaneously during diversion. The charge nurse made the call to reopen the unit under pressure from admin. We were already at 140% capacity. I had no support for the critical care bay.",
+    "Handoff ran over by 20 minutes. Two patients destabilized in the last hour of shift. The vent settings I adjusted at 4am were never formally communicated because we didn\'t have time for structured SBAR.",
+    "The specialist consult for Bed 7 wasn\'t booked. Second day in a row. I spent 25 minutes with the family explaining a delay I couldn\'t fix. The discharge coordinator hasn\'t responded to my last four messages."
+  ],
+  2: [
+    "This has been ongoing for at least six weeks. Multiple nurses on nights have noticed it. We\'ve developed an informal system — one of us does a physical round of every bed alarm every two hours — but that\'s taking time from actual patient care.",
+    "This is the third diversion removal this week alone. Each time, admin lifts it before we\'ve actually cleared the board. It\'s not a random event — it follows a pattern tied to bed availability targets.",
+    "The handoff breakdown happens almost every night when we\'re short. When we\'re fully staffed the SBAR works. The moment we lose one nurse, the last two hours of the protocol collapse.",
+    "This is the fourth time in two weeks with the same family. Different nurses each time, same problem. Nobody\'s connecting the dots because we don\'t have visibility across shifts."
+  ],
+  3: [
+    "We need someone from Biomed to do a full audit of all central monitoring nodes on the ward — not just the one that failed tonight. And we need a formal escalation path that doesn\'t require three follow-up emails to get a maintenance ticket opened.",
+    "The fix is structural: admin needs a policy that requires documented nurse sign-off before any diversion status change. They can\'t unilaterally lift it. We need a record of the unit\'s actual status at the moment the decision was made.",
+    "We need a mandatory two-minute structured handoff buffer built into the shift schedule. Not optional, not dependent on staffing levels. It needs to be a protected window the same way a medication timeout is protected.",
+    "There needs to be a single discharge coordination contact per ward, per shift — someone who owns the specialist scheduling loop. Right now nobody owns it and bedside nurses are filling the gap informally, at the expense of patient care."
+  ]
+};
+
+function toggleRecording(q) {
+  if(state.recordings[q]) {
+    stopRecording(q);
+  } else {
+    startRecording(q);
+  }
+}
+
+function startRecording(q) {
+  state.recordings[q] = true;
+  const ring = document.getElementById('voice-ring-'+q);
+  const icon = document.getElementById('voice-icon-'+q);
+  const status = document.getElementById('voice-status-'+q);
+  const bars = document.getElementById('wave-bars-'+q);
+  const transcript = document.getElementById('transcript-'+q);
+  const noiseAlert = document.getElementById('noise-alert-'+q);
+
+  ring.classList.add('recording');
+  icon.textContent = '⏹️';
+  status.textContent = 'Recording… Tap to stop';
+  status.classList.add('active');
+  transcript.style.display = 'none';
+  transcript.textContent = '';
+
+  // Animate wave bars
+  const barEls = bars.querySelectorAll('.wave-bar');
+  barEls.forEach(b => { b.classList.remove('inactive'); b.style.background='#ef4444'; });
+  state.waveIntervals[q] = setInterval(() => {
+    barEls.forEach(b => {
+      const h = Math.floor(Math.random()*24)+4;
+      b.style.height = h+'px';
+    });
+  }, 120);
+
+  // Show noise alert after 3s to simulate STT uncertainty
+  state.noiseTimers[q] = setTimeout(() => {
+    if(state.recordings[q]) {
+      noiseAlert.classList.add('show');
+    }
+  }, 3000);
+
+  // Auto-stop at 6s with transcript
+  setTimeout(() => {
+    if(state.recordings[q]) stopRecording(q, true);
+  }, 6000);
+}
+
+function stopRecording(q, autoStop=false) {
+  state.recordings[q] = false;
+  clearInterval(state.waveIntervals[q]);
+  clearTimeout(state.noiseTimers[q]);
+
+  const ring = document.getElementById('voice-ring-'+q);
+  const icon = document.getElementById('voice-icon-'+q);
+  const status = document.getElementById('voice-status-'+q);
+  const bars = document.getElementById('wave-bars-'+q);
+  const transcript = document.getElementById('transcript-'+q);
+  const noiseAlert = document.getElementById('noise-alert-'+q);
+
+  ring.classList.remove('recording');
+  icon.textContent = '🎙️';
+
+  const barEls = bars.querySelectorAll('.wave-bar');
+  barEls.forEach(b => {
+    b.classList.add('inactive');
+    b.style.background='';
+    b.style.height='6px';
+  });
+
+  noiseAlert.classList.remove('show');
+
+  // Simulate successful transcription
+  const si = Math.max(0, state.selectedScenario);
+  const txt = transcripts[q][si] || transcripts[q][0];
+  status.textContent = '✓ Transcribed — review below';
+  status.classList.remove('active');
+  status.style.color = '#00d46e';
+  transcript.style.display = 'block';
+  transcript.textContent = '';
+
+  // Typewriter effect
+  let i = 0;
+  const typer = setInterval(() => {
+    if(i < txt.length) {
+      transcript.textContent += txt[i];
+      i++;
+    } else {
+      clearInterval(typer);
+      // Enable continue button
+      if(q===1) { state.q1Done=true; enableNext('q1-next'); }
+      if(q===2) { state.q2Done=true; enableNext('q2-next'); }
+      if(q===3) { state.q3Done=true; enableNext('q3-next'); }
+    }
+  }, 18);
+}
+
+// ─── SUBMIT ───
+function submitReport() {
+  showStep(4);
+}
+
+function resetToStart() {
+  state.selectedScenario = -1;
+  state.q1Done = state.q2Done = state.q3Done = false;
+  document.querySelectorAll('.scenario-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('start-btn').disabled = true;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.voice-transcript').forEach(t => { t.style.display='none'; t.textContent=''; });
+  document.querySelectorAll('.voice-status').forEach(s => { s.textContent='Tap mic to record your response'; s.classList.remove('active'); s.style.color=''; });
+  document.querySelectorAll('.noise-alert').forEach(a => a.classList.remove('show'));
+  ['q1-next','q2-next','q3-next'].forEach(id => { const b=document.getElementById(id); if(b) b.disabled=true; });
+  showStep(0);
+}
+
+// ─── PANIC ───
+function triggerPanic() {
+  const overlay = document.getElementById('panic-overlay');
+  overlay.classList.add('active');
+  const stepNames = {1:'Q1 in progress',2:'Q2 in progress',3:'Q3 in progress'};
+  document.getElementById('panic-progress').textContent = stepNames[state.panicStep] || 'Session active';
+}
+
+function resumeSession() {
+  document.getElementById('panic-overlay').classList.remove('active');
+}
+
+function discardAndExit() {
+  document.getElementById('panic-overlay').classList.remove('active');
+  resetToStart();
+}
+
+// ─── PROFILE ───
+function showProfile() {
+  alert('🔐 Secure Session Active\n\nYour identity is never stored.\nAll session data is processed on-device.\nAudio is deleted after transcription.\n\nNurseVoice v1.0 · Anonymized Research Mode');
+}
+</script>
+</body>
+</html>
